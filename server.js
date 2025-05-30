@@ -3,7 +3,7 @@ const identityService = require('./identityService');
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 10000; // Render uses port 10000 by default
+const PORT = process.env.PORT || 10000;
 
 // Middleware
 app.use(express.json());
@@ -21,7 +21,7 @@ app.use((req, res, next) => {
     }
 });
 
-// Root endpoint (required for Render health checks)
+// Root endpoint
 app.get('/', (req, res) => {
     res.json({ 
         status: 'OK', 
@@ -43,7 +43,7 @@ app.get('/health', (req, res) => {
     });
 });
 
-// Main identify endpoint (as per Bitespeed requirements)
+// Main identify endpoint
 app.post('/identify', async (req, res) => {
     try {
         const { email, phoneNumber } = req.body;
@@ -76,14 +76,14 @@ app.use((err, req, res, next) => {
     });
 });
 
-// 404 handler
-app.use('*', (req, res) => {
+// 404 handler - FIXED for Express 5.x
+app.use((req, res) => {
     res.status(404).json({
         error: 'Endpoint not found'
     });
 });
 
-// IMPORTANT: Bind to 0.0.0.0 for Render deployment
+// Bind to 0.0.0.0 for Render deployment
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server is running on port ${PORT}`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
