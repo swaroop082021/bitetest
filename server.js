@@ -3,12 +3,12 @@ const identityService = require('./identityService');
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000; // Render uses port 10000 by default
 
 // Middleware
 app.use(express.json());
 
-
+// CORS middleware for production
 app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -21,17 +21,29 @@ app.use((req, res, next) => {
     }
 });
 
-// Add a root endpoint
+// Root endpoint (required for Render health checks)
 app.get('/', (req, res) => {
-    res.json({ status: 'OK', message: 'Bitespeed Identity Service is running' });
+    res.json({ 
+        status: 'OK', 
+        message: 'Bitespeed Identity Service is running',
+        timestamp: new Date().toISOString(),
+        endpoints: {
+            identify: '/identify',
+            health: '/health'
+        }
+    });
 });
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-    res.json({ status: 'OK', message: 'Bitespeed Identity Service with Supabase is running' });
+    res.json({ 
+        status: 'OK', 
+        message: 'Bitespeed Identity Service with Supabase is running',
+        environment: process.env.NODE_ENV || 'development'
+    });
 });
 
-// Main identify endpoint
+// Main identify endpoint (as per Bitespeed requirements)
 app.post('/identify', async (req, res) => {
     try {
         const { email, phoneNumber } = req.body;
@@ -50,7 +62,7 @@ app.post('/identify', async (req, res) => {
         console.error('Error in /identify endpoint:', error);
         res.status(500).json({
             error: 'Internal server error',
-            message: error.message
+            message: process.env.NODE_ENV === 'production' ? 'Something went wrong' : error.message
         });
     }
 });
@@ -60,23 +72,23 @@ app.use((err, req, res, next) => {
     console.error(err.stack);
     res.status(500).json({
         error: 'Something went wrong!',
-        message: err.message
+        message: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message
     });
 });
 
-// 404 handler 
-app.use((req, res) => {
+// 404 handler
+app.use('*', (req, res) => {
     res.status(404).json({
         error: 'Endpoint not found'
     });
 });
 
+// IMPORTANT: Bind to 0.0.0.0 for Render deployment
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server is running on port ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`Health check: http://localhost:${PORT}/health`);
     console.log(`Identify endpoint: http://localhost:${PORT}/identify`);
 });
-
-
 
 module.exports = app;
